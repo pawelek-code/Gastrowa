@@ -4,16 +4,24 @@ import MapKit
 struct ContentView: View {
     @StateObject private var locationManager = LocationManager()
     @State private var foodPlaces: [MKMapItem] = []
+    
+    //Map
+    @State var region = MKCoordinateRegion(
+        center: CLLocationCoordinate2D(
+            latitude: 40.7,
+            longitude: -74),
+        span: MKCoordinateSpan(
+            latitudeDelta: 10,
+            longitudeDelta: 10
+        )
+    )
 
     let searcher = PlaceSearcher()
 
+
     var body: some View {
         VStack {
-            // ------ CZĘŚĆ DODANA - MINIMALNA IMPLEMENTACJA MAPY ------
-            Color.gray // Zamiast mapy używamy placeholdera koloru, jeśli mapa nie działa
-                .frame(height: 200)
-                .overlay(Text("Mapa lokalizacji").foregroundColor(.white))
-            // ------ KONIEC CZĘŚCI DODANEJ ------
+            Map(coordinateRegion: $region)
             
             // Poniżej całkowicie niezmieniony oryginalny kod
             if let error = locationManager.locationError {
