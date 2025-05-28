@@ -3,35 +3,39 @@ import MapKit
 
 struct ContentView: View {
     @StateObject private var locationManager = LocationManager()
-    @State private var foodPlaces: [MKMapItem] = []
-    
-    //Map
-    @State var region = MKCoordinateRegion(
-        center: CLLocationCoordinate2D(
-            latitude: 40.7,
-            longitude: -74),
-        span: MKCoordinateSpan(
-            latitudeDelta: 10,
-            longitudeDelta: 10
-        )
+    @State private var rawMapItems: [MKMapItem] = []
+    @State private var foodPlaces: [IdentifiableMapItem] = []
+    @State private var region = MKCoordinateRegion(
+        center: CLLocationCoordinate2D(latitude: 0, longitude: 0),
+        span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
     )
-
     let searcher = PlaceSearcher()
-
 
     var body: some View {
         VStack {
-            Map(coordinateRegion: $region)
-            
-            // Poniżej całkowicie niezmieniony oryginalny kod
-            if let error = locationManager.locationError {
-                Text("Błąd: \(error)")
-                    .foregroundColor(.red)
-                    .padding()
-            } else if let location = locationManager.location {
+            if let location = locationManager.location {
+                Map(coordinateRegion: $region, annotationItems: foodPlaces) { place in
+                    MapAnnotation(coordinate: place.mapItem.placemark.coordinate) {
+                        VStack {
+                            Image(systemName: "fork.knife.circle.fill")
+                                .font(.title)
+                                .foregroundColor(.red)
+                            Text(place.mapItem.name ?? "")
+                                .font(.caption)
+                        }
+                    }
+                }
+                .onAppear {
+                    region.center = location
+                }
+                .frame(height: 300)
+                .cornerRadius(12)
+                .padding()
+
                 Button("Szukaj jedzenia w pobliżu") {
                     searcher.searchNearbyFood(location: location) { items in
-                        foodPlaces = items
+                        rawMapItems = items
+                        foodPlaces = items.map { IdentifiableMapItem(mapItem: $0) }
                     }
                 }
                 .padding()
@@ -39,17 +43,19 @@ struct ContentView: View {
                 .foregroundColor(.white)
                 .cornerRadius(10)
 
-                List(foodPlaces, id: \.self) { place in
+                List(foodPlaces, id: \.id) { place in
                     VStack(alignment: .leading) {
-                        Text(place.name ?? "Brak nazwy")
+                        Text(place.mapItem.name ?? "Brak nazwy")
                             .font(.headline)
-                        Text(place.placemark.title ?? "")
+                        Text(place.mapItem.placemark.title ?? "")
                             .font(.subheadline)
                     }
                 }
+            } else if let error = locationManager.locationError {
+                Text("❌ \(error)")
+                    .foregroundColor(.red)
             } else {
-                Text("Pobieranie lokalizacji…")
-                    .foregroundColor(.gray)
+                ProgressView("Oczekiwanie na lokalizację...")
             }
         }
         .padding()
